@@ -25,7 +25,7 @@ def seed():
  repo.init_db()
  for role,name in [('admin','孔段复核地学编辑'),('analyst','测井序列分析员'),('viewer','地研档案阅览员')]:
   email=f'{role}@shenxi.test';repo.put('users',{'id':email,'email':email,'name':name,'role':role,'password_hash':hash_password('Stratum2026!')},insert_only=True)
- d={'id':'ds-boreholes','name':'沉溪三孔 · 1米完整测井','source':'shenxi_logs_202611.csv','rows':demo_rows(),'created_at':now()};repo.put('datasets',d,insert_only=True)
+ d={'id':'ds-boreholes','name':'沉溪三孔 · 1米完整测井','source':'shenxi_logs_202611.csv','rows':demo_rows(),'created_at':now(),'revision':1};repo.put('datasets',d,insert_only=True)
  m={'id':'model-gaussian3','name':'三态高斯响应模型 · 人工命名v1','config':demo_config(),'revision':1,'created_at':now()};repo.put('state_models',m,insert_only=True)
  snapshot,checksum=lock_snapshot(d,m,'SX-01');study={'id':'study-sequence','name':'SX-01完整160米孔段复核','dataset_id':d['id'],'model_id':m['id'],'borehole':'SX-01','snapshot':snapshot,'checksum':checksum,'created_at':now()};repo.put('studies',study,insert_only=True)
  repo.put('runs',{'id':'run-demo','study_id':study['id'],'status':'completed','result':analyze(snapshot,checksum),'error':'','created_at':now()},insert_only=True)

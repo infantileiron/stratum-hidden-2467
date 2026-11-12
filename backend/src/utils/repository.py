@@ -2,7 +2,7 @@ import json, sqlite3, threading
 from dataclasses import asdict
 from fastapi import HTTPException
 from src.config.settings import DATABASE_URL
-TABLES = ("datasets", "state_models", "studies", "runs", "reviews", "reports", "users", "audit")
+TABLES = ("datasets", "state_models", "studies", "runs", "reviews", "reports", "users", "audit", "corrections")
 _LOCK = threading.RLock()
 def connect():
     if DATABASE_URL.startswith("sqlite:///"):
@@ -42,4 +42,19 @@ def put(table, item, insert_only=False):
             conn.execute(f"INSERT INTO {table} (id,payload) VALUES ({q},{q}) ON CONFLICT(id) {clause}", (item["id"], json.dumps(item, ensure_ascii=False, allow_nan=False)))
             conn.commit()
         return item
+    finally: conn.close()
+def mutate(table, id, fn):
+    assert table in TABLES
+    conn,q = connect()
+    try:
+        with _LOCK:
+            row = conn.execute(f"SELECT payload FROM {table} WHERE id={q}", (id,)).fetchone()
+            if row is None: raise HTTPException(404, "记录不存在")
+            item, extras = fn(json.loads(row[0]))
+            conn.execute(f"INSERT INTO {table} (id,payload) VALUES ({q},{q}) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload", (item["id"], json.dumps(item, ensure_ascii=False, allow_nan=False)))
+            for t, e in extras:
+                assert t in TABLES
+                conn.execute(f"INSERT INTO {t} (id,payload) VALUES ({q},{q}) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload", (e["id"], json.dumps(e, ensure_ascii=False, allow_nan=False)))
+            conn.commit()
+            return item
     finally: conn.close()

@@ -63,6 +63,10 @@ CSV列borehole,depth_m,value，truth可选且仅作模拟参考。孔ID为1—30
 
 StateModel修订PATCH递增revision；研究保存完整孔段读数、truth参考、状态ID/人工名称/参数/初始/转移/修订号及源文件的规范JSON SHA256。worker仅读研究快照，后续模型编辑或数据集改名不改旧结果。报告固定引用批准运行及其旧版本；CSV含模型参数、转移、后验、点态/路径、模拟参考与回溯前驱。未批准生成被拒绝，重复决定409。
 
+## 补测读数批量更正
+
+已入库数据集支持按孔号+深度批量更正读数，不必另建数据集。两阶段接口：POST /datasets/{id}/corrections/preview返回逐处前后读数差异与当前读数版本，确认时POST /datasets/{id}/corrections/confirm携带预览所基于的base_revision，整批原子生效并将数据集revision+1。批内重复深度、数据集中不存在的孔号或深度、非有限或超界读数均使整批撤销，已存在深度只替换读数不增删，确认前复核每孔仍完整1米等距。多人同时更正同一版本时，先确认者生效，后确认者收到409冲突提示而非覆盖他人结果。每批更正的操作者、版本区间与每处前后读数写入corrections表，GET /datasets/{id}/corrections可查，测井页面对所有角色展示。研究快照记录dataset_revision：新研究采用更正后读数，已有研究与批准报告保留原读数。
+
 ## 工程与本地开发
 
 | 层 | 技术 |
@@ -72,7 +76,7 @@ StateModel修订PATCH递增revision；研究保存完整孔段读数、truth参�
 | 核心数值 | Python math自实现logsumexp、前向后向、Viterbi |
 | 异步与数据库 | Redis7.4 / 独立worker / PostgreSQL16 |
 
-81个代码源文件，src内77个职责文件。backend/src含routes/controllers/services/models/schemas/middlewares/utils/constants/config；frontend/src含api/stores/types/components/common/hooks/pages/router/utils/constants。DDL在backend/migrations，advisory lock保护首次建表。科学数值使用Python float双精度并在PostgreSQL JSON文本载荷无显示舍入往返，日志中的−∞用null编码。配套requirements沿用已测依赖，NumPy不是本项目核心算法依赖。
+82个代码源文件，src内78个职责文件。backend/src含routes/controllers/services/models/schemas/middlewares/utils/constants/config；frontend/src含api/stores/types/components/common/hooks/pages/router/utils/constants。DDL在backend/migrations，advisory lock保护首次建表。科学数值使用Python float双精度并在PostgreSQL JSON文本载荷无显示舍入往返，日志中的−∞用null编码。配套requirements沿用已测依赖，NumPy不是本项目核心算法依赖。
 
 Seed固定2409，3孔各160点，配置三态均值/方差与持久转移，含少量模拟测量扰动；truth为模拟生成态，仅参考。SEED_DEMO=true自动seed，失败记日志不阻断，自然键insert-only，重复不新增、不覆盖用户修改。普通SX-01种子两种标签可能完全一致；独立四点反例在验收中明确呈现两种目标差异。
 
@@ -80,7 +84,7 @@ Seed固定2409，3孔各160点，配置三态均值/方差与持久转移，含�
 
 枚举：backend/src/constants/enums.py(Role/RunStatus/ReviewStatus)、domain.py(步长/配额/假设)；frontend/src/constants/enums.ts(角色/状态)。通用共享PageTitle/Notice/StatusBadge，业务共享轨迹/模型矩阵，hooks/useResource/useSession、utils/chart/format。
 
-限制：固定一维高斯和齐次转移假设，不拟合参数，模型失配会造成误导。只处理完整1米孔段，不跨孔、不补缺层；后验是给定模型条件概率，不等于真实岩性确认。浮点极端近同发射仍有有限精度；公共offset和相对分数单独保留。Redis出队强杀不自动重投，JSON载荷无多人乐观锁/迁移回滚。所有真实测试、日志和截图仅在批次test-artifacts/gb-2409。
+限制：固定一维高斯和齐次转移假设，不拟合参数，模型失配会造成误导。只处理完整1米孔段，不跨孔、不补缺层；后验是给定模型条件概率，不等于真实岩性确认。浮点极端近同发射仍有有限精度；公共offset和相对分数单独保留。Redis出队强杀不自动重投；读数更正有版本乐观锁，其余JSON载荷无多人乐观锁/迁移回滚。所有真实测试、日志和截图仅在批次test-artifacts/gb-2409。
 
 ## License
 

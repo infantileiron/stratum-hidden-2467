@@ -11,6 +11,14 @@ class DatasetInput(InputModel):
  csv_text:str=Field(min_length=10,max_length=400000)
 class RenameDataset(InputModel):
  name:str=Field(min_length=2,max_length=100)
+class CorrectionChange(InputModel):
+ borehole:str=Field(min_length=1,max_length=30)
+ depth_m:float
+ value:float
+class CorrectionPreviewInput(InputModel):
+ changes:list[CorrectionChange]=Field(min_length=1,max_length=1000)
+class CorrectionConfirmInput(CorrectionPreviewInput):
+ base_revision:int=Field(ge=1)
 class StateModelInput(InputModel):
  name:str=Field(min_length=2,max_length=100)
  model_json:str=Field(min_length=2,max_length=15000)

@@ -7,6 +7,7 @@ class BoreholeDataset:
  source:str
  rows:list[dict]
  created_at:str=''
+ revision:int=1
 @dataclass
 class StateModel:
  id:str
@@ -46,4 +47,13 @@ class Report:
  run_id:str
  review_id:str
  title:str
+ created_at:str=''
+@dataclass
+class ReadingCorrection:
+ id:str
+ dataset_id:str
+ actor:str
+ base_revision:int
+ new_revision:int
+ changes:list[dict]
  created_at:str=''
